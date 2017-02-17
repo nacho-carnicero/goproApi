@@ -15,10 +15,10 @@ setup(
     version='0.0.1',
     description='A python3 API for controlling a GoPro.',
     long_description=long_description,
-    url='',
+    url='https://github.com/nacho-carnicero/goproApi',
     author='Nacho Carnicero',
     author_email='ignacio.carnicero@sterblue.com',
-    #license=open('LICENSE').read(),
+    license=open('LICENSE').read(),
     packages=['src'],
     setup_requires=[
         'tox',
