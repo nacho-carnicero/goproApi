@@ -3,7 +3,7 @@
 # goproApi.py
 # Nacho Carnicero <ignacio.carnicero@sterblue.com>
 # February 2017
-from GoProHero import GoProHero
+from goproApi import GoProHero
 import time
 import logging
 import sys
@@ -11,10 +11,10 @@ if sys.version_info[0] == 3:
     import asyncio
 
 
-class GoproApi(GoProHero):
+class GoproApi(GoProHero.GoProHero):
 
     def __init__(self,ip='10.5.5.9', password='password', log_level=logging.ERROR) :
-        GoProHero.__init__(self,ip=ip, password=password, log_level=log_level)
+        GoProHero.GoProHero.__init__(self,ip=ip, password=password, log_level=log_level)
 
 
     def getStatus(self):
