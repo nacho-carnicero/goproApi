@@ -41,7 +41,7 @@ class GoproApi(GoProHero.GoProHero):
         except Exception as e:
             logging.error("Error taking a picture with the Gopro with error %s"%e)
         return False
-    # else:
+
     # def takePicture(self):
     #     "Takes a picture with the camera, ensuring that the photo has been taken"
     #     logging.info("Taking a picture with the Gopro")
@@ -68,8 +68,7 @@ class GoproApi(GoProHero.GoProHero):
                 time.sleep(0.3)
                 self.command('power', 'on')
             # Check if parameters have been populated to status message and thus the camera is initialized
-            #(here it supposes that once the 'mode' parameter has been populated all parameters have been populated as well)
-            while ('mode' not in self.getStatus()):
+            while ('mode' not in self.getStatus() or self.getStatus()['npics']==65535):
                 time.sleep(0.3)
             return True
         except Exception as e:
