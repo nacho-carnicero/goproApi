@@ -8,12 +8,21 @@ import logging
 import socket
 import unicodedata
 from colorama import Fore
+import sys
 
-# urllib support for Python 2 and Python 3
-try:
-    from urllib.request import urlopen, HTTPError, URLError
-except ImportError:
-    from urllib2 import urlopen, HTTPError, URLError
+# Manage the different imports needed depending on the python version
+#Python 3
+if sys.version_info[0] == 3:
+    try:
+        from urllib.request import urlopen, HTTPError, URLError
+        import binascii
+    except Exception as e:
+        logging.error("Could not import the packages needed for Python%s"%(sys.version_info[0]))
+else:
+    try:
+        from urllib2 import urlopen, HTTPError, URLError
+    except Exception as e:
+        logging.error("Could not import the packages needed for Python%s"%(sys.version_info[0]))
 
 # attempt imports for image() function
 try:
@@ -35,6 +44,8 @@ class GoProHero:
 
     @classmethod
     def _hexToDec(self, val):
+        if sys.version_info[0] == 3:
+            val = binascii.unhexlify(val)
         returnVal = int.from_bytes(val,byteorder='big')
         return returnVal
 
@@ -61,7 +72,7 @@ class GoProHero:
 
     @classmethod
     def _extractModel(self, val):
-        parts = self._splitByControlCharacters(val.decode('UTF-8'))
+        parts = self._splitByControlCharacters(val)
         if len(parts) > 0:
             # the first two chunks of 'HD4.02.01.02.00'
             return '.'.join(parts[0].split('.')[0:2])
@@ -70,7 +81,7 @@ class GoProHero:
 
     @classmethod
     def _extractFirmware(self, val):
-        parts = self._splitByControlCharacters(val.decode('UTF-8'))
+        parts = self._splitByControlCharacters(val)
         if len(parts) > 0:
             # everything except the first two chunks of 'HD4.02.01.02.00'
             return '.'.join(parts[0].split('.')[2:])
@@ -79,7 +90,7 @@ class GoProHero:
 
     @classmethod
     def _extractName(self, val):
-        parts = self._splitByControlCharacters(val.decode('UTF-8'))
+        parts = self._splitByControlCharacters(val)
         if len(parts) > 1:
             return parts[1]
         else:
@@ -524,7 +535,9 @@ class GoProHero:
                 try:
                     response = urlopen(
                         url, timeout=self.timeout).read()
-                    response = response.decode('utf-8')
+                    #If running python3 then convert from hex bytes to string
+                    if sys.version_info[0] == 3:
+                        response = binascii.hexlify(response).decode('utf-8')
                     status['raw'][cmd] = response  # save raw response
 
                     # loop through different parts we know how to translate
@@ -534,6 +547,7 @@ class GoProHero:
                             part = response[args['a']:args['b']]
                         else:
                             part = response
+                        print(response)
                         # translate the response value if we know how
                         if 'translate' in args:
                             status[item] = self._translate(
