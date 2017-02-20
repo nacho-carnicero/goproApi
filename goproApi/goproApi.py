@@ -3,10 +3,13 @@
 # goproApi.py
 # Nacho Carnicero <ignacio.carnicero@sterblue.com>
 # February 2017
-from goprohero import GoProHero
+from GoProHero import GoProHero
 import time
 import logging
-import asyncio
+import sys
+if sys.version_info[0] == 3:
+    import asyncio
+
 
 class GoproApi(GoProHero):
 
@@ -25,7 +28,6 @@ class GoproApi(GoProHero):
             logging.error("Error getting the Gopro status with error %s"%e)
         return False
 
-
     async def takePicture(self):
         "Takes a picture with the camera, ensuring that the photo has been taken"
         logging.info("Taking a picture with the Gopro")
@@ -39,6 +41,23 @@ class GoproApi(GoProHero):
         except Exception as e:
             logging.error("Error taking a picture with the Gopro with error %s"%e)
         return False
+    # else:
+    # def takePicture(self):
+    #     "Takes a picture with the camera, ensuring that the photo has been taken"
+    #     logging.info("Taking a picture with the Gopro")
+    #     try:
+    #         status = self.getStatus()
+    #         if status['mode']!='still':
+    #             self.changeMode('still')
+    #         currentNumberOfPictures = status['npics']
+    #         self.command('record', 'on')
+    #         while (self.getStatus()['npics']==currentNumberOfPictures):
+    #             time.sleep(0.3)
+    #             self.command('record', 'on')
+    #         return True
+    #     except Exception as e:
+    #         logging.error("Error taking a picture with the Gopro with error %s"%e)
+    #     return False
 
 
     def powerOn(self):
