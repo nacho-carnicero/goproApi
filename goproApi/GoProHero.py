@@ -18,9 +18,11 @@ if sys.version_info[0] == 3:
         import binascii
     except Exception as e:
         logging.error("Could not import the packages needed for Python%s"%(sys.version_info[0]))
+#Python 2
 else:
     try:
         from urllib2 import urlopen, HTTPError, URLError
+        ConnectionError = socket.timeout
     except Exception as e:
         logging.error("Could not import the packages needed for Python%s"%(sys.version_info[0]))
 
@@ -46,7 +48,9 @@ class GoProHero:
     def _hexToDec(self, val):
         if sys.version_info[0] == 3:
             val = binascii.unhexlify(val)
-        returnVal = int.from_bytes(val,byteorder='big')
+            returnVal = int.from_bytes(val,byteorder='big')
+        else:
+            returnVal = int(val,16)
         return returnVal
 
     @classmethod
@@ -54,14 +58,24 @@ class GoProHero:
         # extract non-control characters
         output = []
         s = ''
-        for c in val:
-            if unicodedata.category(c)[0] == 'C':
-                if len(s) > 0:
-                    # start a new string if we found a control character
-                    output.append(str(s))
-                    s = ''
-            else:
-                s += c
+        if sys.version_info[0] == 3:
+            for c in val:
+                if unicodedata.category(c)[0] == 'C':
+                    if len(s) > 0:
+                        # start a new string if we found a control character
+                        output.append(str(s))
+                        s = ''
+                else:
+                    s += c
+        else:
+            for c in unicode(val):
+                if unicodedata.category(c)[0] == 'C':
+                    if len(s) > 0:
+                        # start a new string if we found a control character
+                        output.append(str(s))
+                        s = ''
+                else:
+                    s += c
 
         # clean up any left over string
         if len(s) > 0:
@@ -72,7 +86,10 @@ class GoProHero:
 
     @classmethod
     def _extractModel(self, val):
-        parts = self._splitByControlCharacters(val)
+        if sys.version_info[0] == 3:
+            parts = self._splitByControlCharacters(val)
+        else:
+            parts = self._splitByControlCharacters(val.decode('hex'))
         if len(parts) > 0:
             # the first two chunks of 'HD4.02.01.02.00'
             return '.'.join(parts[0].split('.')[0:2])
@@ -81,7 +98,10 @@ class GoProHero:
 
     @classmethod
     def _extractFirmware(self, val):
-        parts = self._splitByControlCharacters(val)
+        if sys.version_info[0] == 3:
+            parts = self._splitByControlCharacters(val)
+        else:
+            parts = self._splitByControlCharacters(val.decode('hex'))
         if len(parts) > 0:
             # everything except the first two chunks of 'HD4.02.01.02.00'
             return '.'.join(parts[0].split('.')[2:])
@@ -90,7 +110,10 @@ class GoProHero:
 
     @classmethod
     def _extractName(self, val):
-        parts = self._splitByControlCharacters(val)
+        if sys.version_info[0] == 3:
+            parts = self._splitByControlCharacters(val)
+        else:
+            parts = self._splitByControlCharacters(val.decode('hex'))
         if len(parts) > 1:
             return parts[1]
         else:
@@ -195,6 +218,7 @@ class GoProHero:
                 'a': 17,
                 'b': 18,
                 'translate': {
+                    '2': '5MP',
                     '3': '5MP med',
                     '6': '7MP med',
                     '4': '7MP wide',
@@ -527,17 +551,23 @@ class GoProHero:
         # loop through different status URLs
         for cmd in self.statusMatrix:
 
-            # stop sending requests if a previous request failed
+            # stop sending requests if a previous bacpac/se request failed (bacpac/se is the
+            # only request that will get a message when the camera is sleeping with the Wifi on)
             if camActive:
                 url = self._statusURL(cmd)
 
                 # attempt to contact the camera
                 try:
-                    response = urlopen(
-                        url, timeout=self.timeout).read()
-                    #If running python3 then convert from hex bytes to string
                     if sys.version_info[0] == 3:
+                        response = urlopen(
+                            url, timeout=self.timeout).read()
+                        #If running python3 then convert from hex bytes to string
                         response = binascii.hexlify(response).decode('utf-8')
+                    else:
+                        response = urlopen(
+                        url, timeout=self.timeout).read().encode('hex')
+
+
                     status['raw'][cmd] = response  # save raw response
 
                     # loop through different parts we know how to translate
@@ -547,7 +577,6 @@ class GoProHero:
                             part = response[args['a']:args['b']]
                         else:
                             part = response
-                        print(response)
                         # translate the response value if we know how
                         if 'translate' in args:
                             status[item] = self._translate(
@@ -557,7 +586,8 @@ class GoProHero:
                 except (HTTPError, URLError, ConnectionError) as e:
                     logging.warning('{}{} - error opening {}: {}{}'.format(
                         Fore.YELLOW, 'GoProHero.status()', url, e, Fore.RESET))
-                    camActive = False
+                    if cmd == 'bacpac/se':
+                        camActive = False
 
         # build summary
         if 'record' in status and status['record'] == 'on':
